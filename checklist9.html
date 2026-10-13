@@ -308,7 +308,7 @@ function clearAbsence(staff) {
   });
 }
 function nextState(s) {
-  return s==='none'?'ok': s==='ok'?'ng': s==='ng'?'out': 'none';
+  return s==='none'?'ng': s==='ng'?'out': 'none';
 }
 function stateLabel(s) {
   return s==='ok'?'OK': s==='ng'?'NG': s==='out'?'外': '－';
@@ -344,7 +344,7 @@ function startPress(el, item, staff) {
     pressTimer = null;
     if (pressingEl){ pressingEl.classList.remove('pressing'); pressingEl = null; }
     handleChange(item, staff);
-  }, 300);
+  }, 200);
 }
 function cancelPress() {
   if (pressTimer){ clearTimeout(pressTimer); pressTimer = null; }
