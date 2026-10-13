@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>巡回確認チェックシート</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f0f2f5; }
+
+#app-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: #1a237e; color: white; padding: 10px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#app-header h1 { font-size: 15px; font-weight: bold; }
+#header-btns { display: flex; gap: 8px; }
+#header-btns button {
+  padding: 6px 12px; border-radius: 6px; border: 2px solid white;
+  font-size: 13px; font-weight: bold; cursor: pointer; color: white;
+}
+#btn-save { background: #1565c0; }
+#btn-reset { background: transparent; }
+
+#tabs {
+  position: fixed; top: 48px; left: 0; right: 0; z-index: 99;
+  background: white; display: flex; border-bottom: 2px solid #e0e0e0;
+}
+.tab-btn {
+  flex: 1; padding: 10px 4px; font-size: 13px; font-weight: bold;
+  border: none; background: transparent; cursor: pointer; color: #666;
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+}
+.tab-btn.active { color: #1a237e; border-bottom-color: #1a237e; }
+
+#progress-bar-area {
+  position: fixed; top: 88px; left: 0; right: 0; z-index: 98;
+  background: white; padding: 6px 12px; border-bottom: 1px solid #ddd;
+  display: flex; align-items: center; gap: 8px;
+}
+#progress-label { font-size: 11px; font-weight: bold; color: #1a237e; min-width: 40px; }
+#progress-bar-bg { flex: 1; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
+#progress-bar-fill { height: 100%; background: #43a047; border-radius: 4px; transition: width 0.3s; }
+#progress-pct { font-size: 11px; color: #333; min-width: 32px; text-align: right; }
+
+#main-content { padding-top: 128px; }
+
+#check-tab { display: block; }
+#check-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+#sticky-header {
+  display: flex; background: #1a237e; color: white;
+  position: sticky; top: 128px; z-index: 90; min-width: max-content;
+}
+.sh-item-col { width: 110px; min-width: 110px; padding: 8px 6px; font-size: 11px; font-weight: bold; border-right: 1px solid rgba(255,255,255,0.2); }
+.sh-staff-col { width: 72px; min-width: 72px; padding: 8px 4px; font-size: 12px; font-weight: bold; text-align: center; border-right: 1px solid rgba(255,255,255,0.2); }
+
+#check-table { min-width: max-content; }
+.check-row { display: flex; border-bottom: 1px solid #ddd; background: white; }
+.check-row.even { background: #f8f9ff; }
+.check-row.section-header { background: #e8eaf6 !important; }
+.item-cell {
+  width: 110px; min-width: 110px; padding: 8px 6px;
+  font-size: 11px; display: flex; align-items: center;
+  border-right: 1px solid #ddd; word-break: break-all; color: #333;
+}
+.item-cell.section-label { font-weight: bold; color: #1a237e; background: #e8eaf6; }
+.staff-cell {
+  width: 72px; min-width: 72px; padding: 4px;
+  display: flex; align-items: center; justify-content: center;
+  border-right: 1px solid #ddd;
+}
+
+.check-btn {
+  width: 60px; height: 36px; border-radius: 6px; border: none;
+  font-size: 12px; font-weight: bold; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none; -webkit-user-select: none;
+  transition: opacity 0.1s, transform 0.1s;
+}
+.check-btn.state-none { background: #e0e0e0; color: #999; }
+.check-btn.state-ok   { background: #43a047; color: white; }
+.check-btn.state-ng   { background: #e53935; color: white; }
+.check-btn.state-out  { background: #9e9e9e; color: white; font-size: 10px; }
+.check-btn.pressing   { opacity: 0.6; transform: scale(0.93); }
+
+#history-tab { display: none; padding: 16px; }
+#history-tab label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 6px; }
+#history-date { width: 100%; padding: 10px; font-size: 15px; border: 2px solid #1a237e; border-radius: 8px; margin-bottom: 12px; }
+.hist-section { margin-bottom: 16px; }
+.hist-section-title { font-size: 12px; font-weight: bold; color: #1a237e; background: #e8eaf6; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px; }
+.hist-row { display: flex; align-items: center; margin-bottom: 6px; gap: 6px; flex-wrap: wrap; }
+.hist-item-name { font-size: 12px; width: 100px; min-width: 100px; color: #444; }
+.hist-staff-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.hist-btn { padding: 5px 8px; border-radius: 5px; border: none; font-size: 11px; font-weight: bold; cursor: pointer; }
+.hist-btn.state-none { background: #e0e0e0; color: #999; }
+.hist-btn.state-ok   { background: #43a047; color: white; }
+.hist-btn.state-ng   { background: #e53935; color: white; }
+.hist-btn.state-out  { background: #9e9e9e; color: white; }
+#hist-save-btn { width: 100%; padding: 12px; background: #1565c0; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 8px; }
+
+#stats-tab { display: none; padding: 16px; }
+#stats-month-select { width: 100%; padding: 10px; font-size: 15px; border: 2px solid #1a237e; border-radius: 8px; margin-bottom: 12px; }
+.stats-section { margin-bottom: 20px; }
+.stats-section-title { font-size: 14px; font-weight: bold; color: #1a237e; border-bottom: 2px solid #1a237e; padding-bottom: 4px; margin-bottom: 8px; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.stats-table th { background: #1a237e; color: white; padding: 6px 8px; text-align: center; }
+.stats-table td { padding: 6px 8px; border: 1px solid #ddd; text-align: center; }
+.stats-table tr:nth-child(even) td { background: #f8f9ff; }
+.ng-count { font-weight: bold; color: #e53935; }
+#csv-btn { width: 100%; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 12px; }
+.ng-memo-list { font-size: 11px; }
+.ng-memo-item { background: #fff3f3; border-left: 3px solid #e53935; padding: 4px 8px; margin-bottom: 4px; border-radius: 0 4px 4px 0; }
+
+#memo-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 200;
+  align-items: center; justify-content: center;
+}
+#memo-overlay.show { display: flex; }
+#memo-dialog { background: white; border-radius: 12px; padding: 20px; width: 90%; max-width: 360px; }
+#memo-dialog h3 { font-size: 15px; font-weight: bold; margin-bottom: 12px; }
+#memo-input { width: 100%; padding: 10px; font-size: 14px; border: 2px solid #ddd; border-radius: 8px; resize: none; height: 80px; }
+#memo-btns { display: flex; gap: 8px; margin-top: 12px; }
+#memo-ok { flex: 1; padding: 10px; background: #e53935; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+#memo-cancel { flex: 1; padding: 10px; background: #9e9e9e; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+
+#db-status { position: fixed; bottom: 8px; right: 8px; font-size: 10px; padding: 3px 8px; border-radius: 10px; z-index: 50; background: #e8f5e9; color: #2e7d32; }
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <h1>📋 巡回確認チェックシート</h1>
+  <div id="header-btns">
+    <button id="btn-save">💾 保存</button>
+    <button id="btn-reset">リセット</button>
+  </div>
+</div>
+
+<div id="tabs">
+  <button class="tab-btn active" id="tab-check">チェック</button>
+  <button class="tab-btn" id="tab-history">📅 過去入力</button>
+  <button class="tab-btn" id="tab-stats">📊 ミス集計</button>
+</div>
+
+<div id="progress-bar-area">
+  <span id="progress-label">TODAY</span>
+  <div id="progress-bar-bg"><div id="progress-bar-fill" style="width:0%"></div></div>
+  <span id="progress-pct">0%</span>
+</div>
+
+<div id="main-content">
+  <div id="check-tab">
+    <div id="check-wrapper">
+      <div id="sticky-header"></div>
+      <div id="check-table"></div>
+    </div>
+  </div>
+  <div id="history-tab">
+    <label>日付を選択</label>
+    <input type="date" id="history-date">
+    <div id="history-form"></div>
+    <button id="hist-save-btn">💾 この日付で保存</button>
+  </div>
+  <div id="stats-tab">
+    <select id="stats-month-select"></select>
+    <button id="csv-btn">📥 CSVエクスポート</button>
+    <div id="stats-content"></div>
+  </div>
+</div>
+
+<div id="memo-overlay">
+  <div id="memo-dialog">
+    <h3 id="memo-title">NGメモ</h3>
+    <textarea id="memo-input" placeholder="NGの内容を入力（任意）"></textarea>
+    <div id="memo-btns">
+      <button id="memo-ok">NG確定</button>
+      <button id="memo-cancel">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div id="db-status">Firebase読込中...</div>
+
+<script>
+// ===== 設定 =====
+var STAFF = ['早川', '依田', 'ボク', '海保'];
+var SECTIONS = [
+  { label: 'マスタ関連', items: ['SVチェック時', '関戸さんチェック時', '事務局チェック時'], absence: false },
+  { label: '経費関連',   items: ['交通費不備'],  absence: false },
+  { label: '勤怠',       items: ['打刻不備'],    absence: false },
+  { label: '欠勤・有給', items: ['欠勤', '有給'], absence: true }
+];
+var ALL_ITEMS = [];
+SECTIONS.forEach(function(s){ s.items.forEach(function(i){ ALL_ITEMS.push(i); }); });
+var ABSENCE_ITEMS = ['欠勤', '有給'];
+var FB_URL = 'https://checklist-4d7be-default-rtdb.asia-southeast1.firebasedatabase.app';
+var FB_TOKEN = 'AIzaSyCydzRqfD7fJIjQd2_Gp5jx5j1M2hdhu9A';
+
+// ===== 状態 =====
+var todayKey = (function(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+})();
+var checkData = {}, memoData = {}, histData = {};
+var pendingMemo = null, pressTimer = null, pressingEl = null;
+var fbReady = false;
+
+function initData() {
+  var c = {}, m = {};
+  ALL_ITEMS.forEach(function(item){
+    c[item] = {}; m[item] = {};
+    STAFF.forEach(function(s){ c[item][s] = 'none'; m[item][s] = ''; });
+  });
+  return { c:c, m:m };
+}
+function mergeCheck(src) {
+  var out = {};
+  ALL_ITEMS.forEach(function(item){
+    out[item] = {};
+    STAFF.forEach(function(s){ out[item][s] = (src&&src[item]&&src[item][s])||'none'; });
+  });
+  return out;
+}
+function mergeMemo(src) {
+  var out = {};
+  ALL_ITEMS.forEach(function(item){
+    out[item] = {};
+    STAFF.forEach(function(s){ out[item][s] = (src&&src[item]&&src[item][s])||''; });
+  });
+  return out;
+}
+
+// ===== Firebase REST =====
+function fbGet(path, cb) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', FB_URL + path + '.json?auth=' + FB_TOKEN, true);
+  xhr.onload = function(){
+    try { cb(null, JSON.parse(xhr.responseText)); } catch(e){ cb(e, null); }
+  };
+  xhr.onerror = function(){ cb(new Error('network'), null); };
+  xhr.send();
+}
+function fbSet(path, data, cb) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('PUT', FB_URL + path + '.json?auth=' + FB_TOKEN, true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.onload = function(){ if(cb) cb(xhr.status >= 200 && xhr.status < 300 ? null : new Error(xhr.status)); };
+  xhr.onerror = function(){ if(cb) cb(new Error('network')); };
+  xhr.send(JSON.stringify(data));
+}
+
+function setStatus(msg, ok) {
+  var el = document.getElementById('db-status');
+  el.textContent = msg;
+  el.style.background = ok === true ? '#e8f5e9' : ok === false ? '#ffebee' : '#fff3e0';
+  el.style.color = ok === true ? '#2e7d32' : ok === false ? '#c62828' : '#e65100';
+}
+
+function loadFirebase() {
+  setStatus('読込中...', null);
+  fbGet('/checklist_history', function(e, histVal){
+    if (!e && histVal) histData = histVal;
+    fbGet('/checklist_today', function(e2, todayVal){
+      if (!e2 && todayVal) {
+        if (todayVal.date && todayVal.date !== todayKey) {
+          if (todayVal.date && !histData[todayVal.date]) {
+            histData[todayVal.date] = { check: todayVal.check||{}, memo: todayVal.memo||{} };
+            fbSet('/checklist_history', histData, null);
+          }
+          var d = initData(); checkData = d.c; memoData = d.m;
+        } else {
+          checkData = mergeCheck(todayVal.check);
+          memoData  = mergeMemo(todayVal.memo);
+        }
+      } else {
+        var d = initData(); checkData = d.c; memoData = d.m;
+      }
+      fbReady = true;
+      setStatus('✓ 同期済み', true);
+      renderCheckTable();
+      updateProgress();
+    });
+  });
+}
+
+function saveToday() {
+  setStatus('保存中...', null);
+  fbSet('/checklist_today', { date: todayKey, check: checkData, memo: memoData }, function(err){
+    setStatus(err ? '⚠ 保存失敗' : '✓ 保存完了', !err);
+  });
+}
+
+// ===== ロジック =====
+function isAbsent(staff) {
+  return ABSENCE_ITEMS.some(function(a){ return checkData[a]&&checkData[a][staff]==='ok'; });
+}
+function applyAbsence(staff) {
+  ALL_ITEMS.filter(function(i){ return ABSENCE_ITEMS.indexOf(i)<0; }).forEach(function(item){
+    checkData[item][staff] = 'out';
+  });
+}
+function clearAbsence(staff) {
+  ALL_ITEMS.filter(function(i){ return ABSENCE_ITEMS.indexOf(i)<0; }).forEach(function(item){
+    if (checkData[item][staff]==='out') checkData[item][staff] = 'none';
+  });
+}
+function nextState(s) {
+  return s==='none'?'ok': s==='ok'?'ng': s==='ng'?'out': 'none';
+}
+function stateLabel(s) {
+  return s==='ok'?'OK': s==='ng'?'NG': s==='out'?'外': '－';
+}
+
+function handleChange(item, staff) {
+  var cur = checkData[item][staff];
+  if (ABSENCE_ITEMS.indexOf(item)>=0) {
+    if (cur==='none'){ checkData[item][staff]='ok'; applyAbsence(staff); }
+    else             { checkData[item][staff]='none'; clearAbsence(staff); }
+    renderCheckTable(); updateProgress(); return;
+  }
+  if (isAbsent(staff)) return;
+  var nxt = nextState(cur);
+  if (nxt==='ng') {
+    pendingMemo = { item:item, staff:staff, hist:false };
+    document.getElementById('memo-title').textContent = item+' / '+staff+' → NG';
+    document.getElementById('memo-input').value = memoData[item][staff]||'';
+    document.getElementById('memo-overlay').classList.add('show');
+    return;
+  }
+  checkData[item][staff] = nxt; memoData[item][staff] = '';
+  var btn = document.querySelector('[data-item="'+item+'"][data-staff="'+staff+'"]');
+  if (btn) { btn.className='check-btn state-'+nxt; btn.textContent=stateLabel(nxt); }
+  updateProgress();
+}
+
+// 長押し
+function startPress(el, item, staff) {
+  cancelPress();
+  el.classList.add('pressing'); pressingEl = el;
+  pressTimer = setTimeout(function(){
+    pressTimer = null;
+    if (pressingEl){ pressingEl.classList.remove('pressing'); pressingEl = null; }
+    handleChange(item, staff);
+  }, 300);
+}
+function cancelPress() {
+  if (pressTimer){ clearTimeout(pressTimer); pressTimer = null; }
+  if (pressingEl){ pressingEl.classList.remove('pressing'); pressingEl = null; }
+}
+
+// ===== チェックテーブル描画 =====
+function renderCheckTable() {
+  var hHtml = '<div class="sh-item-col">確認項目</div>';
+  STAFF.forEach(function(s){ hHtml += '<div class="sh-staff-col">'+s+'</div>'; });
+  document.getElementById('sticky-header').innerHTML = hHtml;
+
+  var html = ''; var rowIdx = 0;
+  SECTIONS.forEach(function(sec){
+    html += '<div class="check-row section-header"><div class="item-cell section-label">'+sec.label+'</div>';
+    STAFF.forEach(function(){ html += '<div class="staff-cell"></div>'; });
+    html += '</div>';
+    sec.items.forEach(function(item){
+      var cls = rowIdx%2===0 ? '' : ' even'; rowIdx++;
+      html += '<div class="check-row'+cls+'"><div class="item-cell">'+item+'</div>';
+      STAFF.forEach(function(staff){
+        var s = (checkData[item]&&checkData[item][staff])||'none';
+        var dim = (ABSENCE_ITEMS.indexOf(item)<0 && isAbsent(staff)) ? ' style="opacity:0.4"' : '';
+        html += '<div class="staff-cell"><button class="check-btn state-'+s+'"'
+          +' data-item="'+item+'" data-staff="'+staff+'"'+dim+'>'+stateLabel(s)+'</button></div>';
+      });
+      html += '</div>';
+    });
+  });
+
+  var tbl = document.getElementById('check-table');
+  tbl.innerHTML = html;
+
+  tbl.addEventListener('touchstart', function(e){
+    var b = e.target.closest('.check-btn'); if(!b) return;
+    e.preventDefault(); startPress(b, b.dataset.item, b.dataset.staff);
+  }, { passive: false });
+  tbl.addEventListener('touchend',    function(){ cancelPress(); }, { passive:true });
+  tbl.addEventListener('touchcancel', function(){ cancelPress(); }, { passive:true });
+  tbl.addEventListener('mousedown', function(e){
+    var b = e.target.closest('.check-btn'); if(!b) return;
+    startPress(b, b.dataset.item, b.dataset.staff);
+  });
+  tbl.addEventListener('mouseup',    function(){ cancelPress(); });
+  tbl.addEventListener('mouseleave', function(){ cancelPress(); });
+}
+
+function updateProgress() {
+  var total=0, done=0;
+  SECTIONS.forEach(function(sec){
+    if (sec.absence) return;
+    sec.items.forEach(function(item){
+      STAFF.forEach(function(staff){
+        if (isAbsent(staff)) return;
+        total++;
+        var s = checkData[item]&&checkData[item][staff];
+        if (s==='ok'||s==='ng'||s==='out') done++;
+      });
+    });
+  });
+  var pct = total===0 ? 0 : Math.round(done/total*100);
+  document.getElementById('progress-bar-fill').style.width = pct+'%';
+  document.getElementById('progress-pct').textContent = pct+'%';
+}
+
+// ===== タブ =====
+function showTab(t) {
+  ['check','history','stats'].forEach(function(x){
+    document.getElementById(x+'-tab').style.display = x===t ? 'block' : 'none';
+    document.getElementById('tab-'+x).classList.toggle('active', x===t);
+  });
+  if (t==='history') renderHistForm();
+  if (t==='stats')   renderStatsMonths();
+}
+document.getElementById('tab-check').onclick   = function(){ showTab('check'); };
+document.getElementById('tab-history').onclick  = function(){ showTab('history'); };
+document.getElementById('tab-stats').onclick    = function(){ showTab('stats'); };
+document.getElementById('btn-save').onclick     = saveToday;
+document.getElementById('btn-reset').onclick    = function(){
+  if (!confirm('今日のデータをリセットしますか？')) return;
+  var d = initData(); checkData=d.c; memoData=d.m;
+  renderCheckTable(); updateProgress(); saveToday();
+};
+
+// ===== 過去入力 =====
+function renderHistForm() {
+  var el = document.getElementById('history-date');
+  if (!el.value) el.value = todayKey;
+  buildHistForm(el.value);
+  el.onchange = function(){ buildHistForm(el.value); };
+}
+function buildHistForm(dateStr) {
+  var saved = histData[dateStr]||{};
+  var sc = saved.check||{}, sm = saved.memo||{};
+  var html='';
+  SECTIONS.forEach(function(sec){
+    html += '<div class="hist-section"><div class="hist-section-title">'+sec.label+'</div>';
+    sec.items.forEach(function(item){
+      html += '<div class="hist-row"><div class="hist-item-name">'+item+'</div><div class="hist-staff-btns">';
+      STAFF.forEach(function(staff){
+        var s = (sc[item]&&sc[item][staff])||'none';
+        html += '<button class="hist-btn state-'+s+'" data-hi="'+item+'" data-hs="'+staff+'" data-hd="'+dateStr+'">'+staff+':'+stateLabel(s)+'</button>';
+      });
+      html += '</div></div>';
+    });
+    html += '</div>';
+  });
+  var form = document.getElementById('history-form');
+  form.innerHTML = html;
+  form.onclick = function(e){
+    var b = e.target.closest('.hist-btn'); if(!b) return;
+    cycleHist(b, b.dataset.hi, b.dataset.hs, b.dataset.hd);
+  };
+}
+function cycleHist(el, item, staff, dateStr) {
+  if (!histData[dateStr]) histData[dateStr] = { check:{}, memo:{} };
+  var hd = histData[dateStr];
+  if (!hd.check[item]) hd.check[item]={};
+  if (!hd.memo[item])  hd.memo[item]={};
+  var cur = hd.check[item][staff]||'none';
+  var nxt = nextState(cur);
+  if (nxt==='ng') {
+    pendingMemo = { item:item, staff:staff, hist:true, date:dateStr };
+    document.getElementById('memo-title').textContent = item+' / '+staff+' → NG';
+    document.getElementById('memo-input').value = hd.memo[item][staff]||'';
+    document.getElementById('memo-overlay').classList.add('show');
+    return;
+  }
+  hd.check[item][staff]=nxt; hd.memo[item][staff]='';
+  el.className='hist-btn state-'+nxt; el.textContent=staff+':'+stateLabel(nxt);
+}
+document.getElementById('hist-save-btn').onclick = function(){
+  var dateStr = document.getElementById('history-date').value;
+  if (!dateStr){ alert('日付を選択してください'); return; }
+  setStatus('保存中...', null);
+  fbSet('/checklist_history', histData, function(err){
+    setStatus(err?'⚠ 保存失敗':'✓ 保存完了', !err);
+    if (!err) alert(dateStr+' のデータを保存しました');
+  });
+};
+
+// ===== NGメモ =====
+document.getElementById('memo-ok').onclick = function(){
+  if (!pendingMemo) return;
+  var item=pendingMemo.item, staff=pendingMemo.staff, memo=document.getElementById('memo-input').value;
+  document.getElementById('memo-overlay').classList.remove('show');
+  if (pendingMemo.hist) {
+    var hd = histData[pendingMemo.date];
+    hd.check[item][staff]='ng'; hd.memo[item][staff]=memo;
+    buildHistForm(pendingMemo.date);
+  } else {
+    checkData[item][staff]='ng'; memoData[item][staff]=memo;
+    renderCheckTable(); updateProgress();
+  }
+  pendingMemo = null;
+};
+document.getElementById('memo-cancel').onclick = function(){
+  document.getElementById('memo-overlay').classList.remove('show');
+  pendingMemo = null;
+};
+
+// ===== ミス集計 =====
+function renderStatsMonths() {
+  var months={};
+  months[todayKey.slice(0,7)]=true;
+  Object.keys(histData).forEach(function(d){ months[d.slice(0,7)]=true; });
+  var sorted=Object.keys(months).sort().reverse();
+  document.getElementById('stats-month-select').innerHTML =
+    sorted.map(function(m){ return '<option value="'+m+'">'+m+'</option>'; }).join('');
+  renderStats();
+}
+document.getElementById('stats-month-select').onchange = renderStats;
+
+function renderStats() {
+  var month = document.getElementById('stats-month-select').value;
+  var days = Object.keys(histData).filter(function(d){ return d.indexOf(month)===0; });
+  var sNG={}, iNG={}, memos=[];
+  STAFF.forEach(function(s){ sNG[s]=0; });
+  ALL_ITEMS.forEach(function(i){ iNG[i]=0; });
+
+  function tally(chk, memo, label){
+    ALL_ITEMS.forEach(function(item){
+      STAFF.forEach(function(staff){
+        if (chk[item]&&chk[item][staff]==='ng'){
+          sNG[staff]++; iNG[item]++;
+          var m=memo&&memo[item]&&memo[item][staff];
+          if(m) memos.push({day:label,item:item,staff:staff,memo:m});
+        }
+      });
+    });
+  }
+  days.forEach(function(d){ var dd=histData[d]; if(dd) tally(dd.check||{},dd.memo||{},d); });
+  if (todayKey.indexOf(month)===0) tally(checkData,memoData,todayKey+'(今日)');
+
+  var html='<div class="stats-section"><div class="stats-section-title">スタッフ別NGミス数</div>'
+    +'<table class="stats-table"><tr><th>スタッフ</th><th>NG数</th></tr>'
+    +STAFF.map(function(s){ return '<tr><td>'+s+'</td><td class="ng-count">'+(sNG[s]||0)+'</td></tr>'; }).join('')
+    +'</table></div>';
+  html+='<div class="stats-section"><div class="stats-section-title">項目別NGミス数</div>'
+    +'<table class="stats-table"><tr><th>項目</th><th>NG数</th></tr>'
+    +ALL_ITEMS.filter(function(i){ return ABSENCE_ITEMS.indexOf(i)<0; })
+      .map(function(i){ return '<tr><td>'+i+'</td><td class="ng-count">'+(iNG[i]||0)+'</td></tr>'; }).join('')
+    +'</table></div>';
+  if (memos.length) {
+    html+='<div class="stats-section"><div class="stats-section-title">NGメモ一覧</div><div class="ng-memo-list">'
+      +memos.map(function(m){ return '<div class="ng-memo-item"><b>'+m.day+' / '+m.item+' / '+m.staff+'</b><br>'+m.memo+'</div>'; }).join('')
+      +'</div></div>';
+  }
+  document.getElementById('stats-content').innerHTML = html;
+}
+
+// ===== CSV =====
+document.getElementById('csv-btn').onclick = function(){
+  var month = document.getElementById('stats-month-select').value;
+  var days = Object.keys(histData).filter(function(d){ return d.indexOf(month)===0; }).sort();
+  if (todayKey.indexOf(month)===0) days.push(todayKey+'(今日)');
+  var rows=[['日付','項目'].concat(STAFF).join(',')];
+  days.forEach(function(day){
+    var isT = day.indexOf('今日')>=0;
+    var chk = isT ? checkData : ((histData[day]&&histData[day].check)||{});
+    ALL_ITEMS.forEach(function(item){
+      rows.push([day,item].concat(STAFF.map(function(s){ return (chk[item]&&chk[item][s])||'none'; })).join(','));
+    });
+  });
+  var blob=new Blob(['﻿'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='checklist_'+month+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+};
+
+// ===== 起動 =====
+loadFirebase();
+</script>
+</body>
+</html>
