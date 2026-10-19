@@ -109,7 +109,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-ser
 .stats-table td { padding: 6px 8px; border: 1px solid #ddd; text-align: center; }
 .stats-table tr:nth-child(even) td { background: #f8f9ff; }
 .ng-count { font-weight: bold; color: #e53935; }
-#csv-btn { width: 100%; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 12px; }
+#csv-btn { width: 100%; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
+#copy-report-btn { width: 100%; padding: 10px; background: #6a1b9a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 12px; }
+#copy-toast { display: none; text-align: center; color: #6a1b9a; font-size: 13px; font-weight: bold; margin-bottom: 8px; }
 .ng-memo-list { font-size: 11px; }
 .ng-memo-item { background: #fff3f3; border-left: 3px solid #e53935; padding: 4px 8px; margin-bottom: 4px; border-radius: 0 4px 4px 0; }
 
@@ -167,6 +169,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-ser
   <div id="stats-tab">
     <select id="stats-month-select"></select>
     <button id="csv-btn">📥 CSVエクスポート</button>
+    <button id="copy-report-btn">📋 報告文をコピー</button>
+    <div id="copy-toast">✅ コピーしました！</div>
     <div id="stats-content"></div>
   </div>
 </div>
