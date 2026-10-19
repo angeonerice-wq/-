@@ -528,17 +528,21 @@ document.getElementById('stats-month-select').onchange = renderStats;
 function renderStats() {
   var month = document.getElementById('stats-month-select').value;
   var days = Object.keys(histData).filter(function(d){ return d.indexOf(month)===0; });
-  var sNG={}, iNG={}, memos=[];
-  STAFF.forEach(function(s){ sNG[s]=0; });
-  ALL_ITEMS.forEach(function(i){ iNG[i]=0; });
+  var sNG={}, sOUT={}, iNG={}, siNG={}, memos=[];
+  var ITEMS_NO_ABS = ALL_ITEMS.filter(function(i){ return ABSENCE_ITEMS.indexOf(i)<0; });
+  STAFF.forEach(function(s){ sNG[s]=0; sOUT[s]=0; siNG[s]={}; ITEMS_NO_ABS.forEach(function(i){ siNG[s][i]={ng:0,out:0}; }); });
+  ITEMS_NO_ABS.forEach(function(i){ iNG[i]=0; });
 
   function tally(chk, memo, label){
-    ALL_ITEMS.forEach(function(item){
+    ITEMS_NO_ABS.forEach(function(item){
       STAFF.forEach(function(staff){
-        if (chk[item]&&chk[item][staff]==='ng'){
-          sNG[staff]++; iNG[item]++;
+        var v = chk[item]&&chk[item][staff];
+        if (v==='ng'){
+          sNG[staff]++; iNG[item]++; siNG[staff][item].ng++;
           var m=memo&&memo[item]&&memo[item][staff];
           if(m) memos.push({day:label,item:item,staff:staff,memo:m});
+        } else if (v==='out'){
+          sOUT[staff]++; siNG[staff][item].out++;
         }
       });
     });
@@ -546,15 +550,38 @@ function renderStats() {
   days.forEach(function(d){ var dd=histData[d]; if(dd) tally(dd.check||{},dd.memo||{},d); });
   if (todayKey.indexOf(month)===0) tally(checkData,memoData,todayKey+'(今日)');
 
+  // スタッフ別合計
   var html='<div class="stats-section"><div class="stats-section-title">スタッフ別NGミス数</div>'
-    +'<table class="stats-table"><tr><th>スタッフ</th><th>NG数</th></tr>'
-    +STAFF.map(function(s){ return '<tr><td>'+s+'</td><td class="ng-count">'+(sNG[s]||0)+'</td></tr>'; }).join('')
+    +'<table class="stats-table"><tr><th>スタッフ</th><th>NG数</th><th>外数</th></tr>'
+    +STAFF.map(function(s){ return '<tr><td>'+s+'</td><td class="ng-count">'+(sNG[s]||0)+'</td><td style="color:#757575;font-weight:bold">'+(sOUT[s]||0)+'</td></tr>'; }).join('')
     +'</table></div>';
+
+  // スタッフ別項目内訳
+  html+='<div class="stats-section"><div class="stats-section-title">スタッフ別 項目内訳</div>';
+  STAFF.forEach(function(s){
+    var rows = ITEMS_NO_ABS.filter(function(i){ return siNG[s][i].ng>0||siNG[s][i].out>0; });
+    html+='<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:bold;color:#1a237e;margin-bottom:4px">'+s+'</div>';
+    if(rows.length===0){
+      html+='<div style="font-size:11px;color:#999;padding:4px 8px">なし</div>';
+    } else {
+      html+='<table class="stats-table"><tr><th>項目</th><th>NG</th><th>外</th></tr>'
+        +rows.map(function(i){
+          return '<tr><td>'+i+'</td>'
+            +'<td class="ng-count">'+(siNG[s][i].ng||0)+'</td>'
+            +'<td style="color:#757575;font-weight:bold">'+(siNG[s][i].out||0)+'</td></tr>';
+        }).join('')
+        +'</table>';
+    }
+    html+='</div>';
+  });
+  html+='</div>';
+
+  // 項目別合計
   html+='<div class="stats-section"><div class="stats-section-title">項目別NGミス数</div>'
     +'<table class="stats-table"><tr><th>項目</th><th>NG数</th></tr>'
-    +ALL_ITEMS.filter(function(i){ return ABSENCE_ITEMS.indexOf(i)<0; })
-      .map(function(i){ return '<tr><td>'+i+'</td><td class="ng-count">'+(iNG[i]||0)+'</td></tr>'; }).join('')
+    +ITEMS_NO_ABS.map(function(i){ return '<tr><td>'+i+'</td><td class="ng-count">'+(iNG[i]||0)+'</td></tr>'; }).join('')
     +'</table></div>';
+
   if (memos.length) {
     html+='<div class="stats-section"><div class="stats-section-title">NGメモ一覧</div><div class="ng-memo-list">'
       +memos.map(function(m){ return '<div class="ng-memo-item"><b>'+m.day+' / '+m.item+' / '+m.staff+'</b><br>'+m.memo+'</div>'; }).join('')
