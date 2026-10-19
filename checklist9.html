@@ -599,23 +599,29 @@ function renderStats() {
 }
 
 // ===== 報告文コピー =====
-var REPORT_ITEMS = ['SVチェック時', '関戸さんチェック時', '事務局チェック時', '交通費不備'];
+var REPORT_SECTIONS = [
+  { label: 'SVチェック時',     item: 'SVチェック時' },
+  { label: '関戸さんチェック', item: '関戸さんチェック時' },
+  { label: '事務局チェック',   item: '事務局チェック時' },
+  { label: '交通費不備',       item: '交通費不備' },
+  { label: '打刻不備',         item: '打刻不備' }
+];
 document.getElementById('copy-report-btn').onclick = function(){
   var month = document.getElementById('stats-month-select').value;
   var days = Object.keys(histData).filter(function(d){ return d.indexOf(month)===0; });
+
+  // item×staff のNG数を集計
   var counts = {};
-  var totals = {};
-  STAFF.forEach(function(s){
-    counts[s] = {}; totals[s] = {ng:0, out:0};
-    REPORT_ITEMS.forEach(function(i){ counts[s][i] = {ng:0, out:0}; });
+  REPORT_SECTIONS.forEach(function(sec){
+    counts[sec.item] = {};
+    STAFF.forEach(function(s){ counts[sec.item][s] = 0; });
   });
 
   function tally(chk){
-    REPORT_ITEMS.forEach(function(item){
+    REPORT_SECTIONS.forEach(function(sec){
       STAFF.forEach(function(staff){
-        var v = (chk[item]&&chk[item][staff])||'none';
-        if(v==='ng'){ counts[staff][item].ng++; totals[staff].ng++; }
-        else if(v==='out'){ counts[staff][item].out++; totals[staff].out++; }
+        var v = (chk[sec.item]&&chk[sec.item][staff])||'none';
+        if(v==='ng') counts[sec.item][staff]++;
       });
     });
   }
@@ -623,18 +629,16 @@ document.getElementById('copy-report-btn').onclick = function(){
   if(todayKey.indexOf(month)===0) tally(checkData);
 
   var lines = ['【' + month + ' 不備集計】', ''];
-  STAFF.forEach(function(s){
-    var t = totals[s];
-    lines.push('◆' + s + '  NG:' + t.ng + '件 / 外:' + t.out + '件');
-    var hasItem = false;
-    REPORT_ITEMS.forEach(function(item){
-      var c = counts[s][item];
-      if(c.ng>0||c.out>0){
-        lines.push('  ・' + item + '  NG:' + c.ng + ' / 外:' + c.out);
-        hasItem = true;
-      }
+  REPORT_SECTIONS.forEach(function(sec){
+    lines.push('■ ' + sec.label);
+    var total = 0;
+    STAFF.forEach(function(s){
+      var n = counts[sec.item][s];
+      lines.push(s + '：' + n + '件');
+      total += n;
     });
-    if(!hasItem) lines.push('  ・不備なし');
+    lines.push('---------------------------------');
+    lines.push('総計：' + total + '件');
     lines.push('');
   });
 
@@ -646,14 +650,13 @@ document.getElementById('copy-report-btn').onclick = function(){
   hint.style.display = 'block';
   ta.focus();
   ta.setSelectionRange(0, text.length);
-  // クリップボードAPIも試みる
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(function(){
       var toast = document.getElementById('copy-toast');
       toast.style.display = 'block';
       hint.style.display = 'none';
       setTimeout(function(){ toast.style.display = 'none'; }, 2000);
-    }).catch(function(){ /* テキストエリアで対応 */ });
+    }).catch(function(){});
   }
 };
 
